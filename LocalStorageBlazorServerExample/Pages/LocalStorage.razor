@@ -1,0 +1,83 @@
+﻿@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using LocalStorageBlazorServerExample.Data
+@inject ProtectedLocalStorage ProtectedLocalStorage
+@inject LocalStorageService LocalStorageService
+@page "/component"
+
+<form>
+    <div>
+        <label>Store with scope? <input type="checkbox" @bind-value="IsStoreWithScope" /></label>
+    </div>
+    <div>
+        <label>Key: <input type="text" @bind-value="LocalStorageKey" /></label>
+    </div>
+    <div>
+        <label>Value: <input type="text" @bind-value="LocalStorageValue" /></label>
+    </div>
+    <div>
+        <button type="button" @onclick="StoreKeyAsync">Store Key</button>
+    </div>
+</form>
+<form>
+    <div>
+        <label>Query with scope? <input type="checkbox" @bind-value="IsQueryWithScope" /></label>
+    </div>
+    <div>
+        <label>Key: <input type="text" @bind-value="LocalStorageQueryKey" /></label>
+    </div>
+    <div>
+        <button type="button" @onclick="GetValueAsync">Get Value</button>
+        <button type="button" @onclick="DeleteValueAsync">Delete Key</button>
+    </div>
+    <div>Value: @LocalStorageQueryValue</div>
+</form>
+
+@code {
+    public bool IsStoreWithScope { get; set; } = false;
+    public bool IsQueryWithScope { get; set; } = false;
+    public string LocalStorageKey { get; set; }
+    public string LocalStorageValue { get; set; }
+    public string LocalStorageQueryKey { get; set; }
+    public string LocalStorageQueryValue { get; set; }
+
+    private async Task StoreKeyAsync()
+    {
+        if (IsStoreWithScope)
+        {
+            await ProtectedLocalStorage.SetAsync("login", LocalStorageKey, LocalStorageValue);
+        }
+        else
+        {
+            await ProtectedLocalStorage.SetAsync(LocalStorageKey, LocalStorageValue);
+        }
+    }
+
+    private async Task GetValueAsync()
+    {
+        ProtectedBrowserStorageResult<string> result = new();
+
+        try
+        {
+            if (IsQueryWithScope)
+            {
+                result = await ProtectedLocalStorage.GetAsync<string>("login", LocalStorageQueryKey);
+            }
+            else
+            {
+                result = await ProtectedLocalStorage.GetAsync<string>(LocalStorageQueryKey);
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            LocalStorageQueryValue = result.Success ? result.Value : "Not success.";
+        }
+    }
+
+    private async Task DeleteValueAsync()
+    {
+        await ProtectedLocalStorage.DeleteAsync(LocalStorageQueryKey);
+    }
+}
