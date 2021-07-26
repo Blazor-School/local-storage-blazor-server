@@ -1,0 +1,76 @@
+﻿@inject IJSRuntime JSRuntime
+@using System.Text.Json
+@using Newtonsoft.Json
+@page "/unprotected-local-storage"
+
+<form>
+    <div>
+        <label>Key: <input type="text" @bind-value="LocalStorageKey" /></label>
+    </div>
+    <div>
+        <label>Value: <input type="text" @bind-value="LocalStorageValue" /></label>
+    </div>
+    <div>
+        <button type="button" @onclick="StoreKeyAsync">Store Key</button>
+    </div>
+</form>
+<form>
+    <div>
+        <label>Key: <input type="text" @bind-value="LocalStorageQueryKey" /></label>
+    </div>
+    <div>
+        <button type="button" @onclick="GetValueAsync">Get Value</button>
+        <button type="button" @onclick="DeleteValueAsync">Delete Key</button>
+    </div>
+    <div>Value: @LocalStorageQueryValue</div>
+</form>
+<div>
+    <div>All local storage data:</div>
+    <button type="button" @onclick="GetAllLocalStorageDataAsync">Refresh</button>
+    <button type="button" @onclick="ClearAllDataAsync">Clean All</button>
+    @foreach (KeyValuePair<string, string> keyValuePair in AllData)
+    {
+        <div>@keyValuePair.Key: @keyValuePair.Value</div>
+    }
+</div>
+
+@code {
+    public string LocalStorageKey { get; set; }
+    public string LocalStorageValue { get; set; }
+    public string LocalStorageQueryKey { get; set; }
+    public string LocalStorageQueryValue { get; set; }
+    public Dictionary<string, string> AllData { get; set; } = new();
+
+    private async Task StoreKeyAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, LocalStorageValue);
+    }
+
+    private async Task GetValueAsync()
+    {
+        LocalStorageQueryValue = await JSRuntime.InvokeAsync<string>("localStorage.getItem", LocalStorageQueryKey);
+    }
+
+    private async Task DeleteValueAsync()
+    {
+        await JSRuntime.InvokeAsync<string>("localStorage.removeItem", LocalStorageQueryKey);
+    }
+
+    private async Task GetAllLocalStorageDataAsync()
+    {
+        var jsonElement = await JSRuntime.InvokeAsync<JsonElement>("BlazorUtil.getAllStorage");
+        var enumerator = jsonElement.EnumerateArray();
+        AllData.Clear();
+
+        while (enumerator.MoveNext())
+        {
+            var keyValue = JsonConvert.DeserializeObject<List<string>>(enumerator.Current.GetRawText());
+            AllData.Add(keyValue[0], keyValue[1]);
+        }
+    }
+
+    private async Task ClearAllDataAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.clear");
+    }
+}
